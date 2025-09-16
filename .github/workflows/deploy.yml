@@ -1,43 +1,29 @@
-name: Deploy Symfony to Dev
+name: Deploy Symfony to Dev server
 
 on:
-  workflow_dispatch: # manual trigger only
+  workflow_dispatch: # exécution uniquement manuelle
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout the repo
+      # 1. Récupérer le code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2. Setup PHP (optional, if you need Composer)
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: mbstring, intl, pdo_mysql
-          tools: composer:v2
-
-      # 3. Install dependencies
-      - name: Install dependencies
-        run: composer install --no-progress --prefer-dist --optimize-autoloader
-
-      # 4. Run tests (optional)
-      - name: Run tests
+      # 2. Configurer SSH avec tes secrets
+      - name: Setup SSH
         run: |
-          if [ -f ./vendor/bin/phpunit ]; then
-            ./vendor/bin/phpunit
-          else
-            echo "⚠️ No tests found"
-          fi
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEV_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.DEV_HOST }} >> ~/.ssh/known_hosts
 
-      # 5. Deploy files via rsync (no sudo)
+      # 3. Déployer avec rsync
       - name: Deploy to Dev Server
         run: |
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
             ./ ${{ secrets.DEV_USER }}@${{ secrets.DEV_HOST }}:/var/www/html/symfony-demo
-
 
