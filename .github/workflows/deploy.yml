@@ -1,0 +1,61 @@
+name: CI/CD Symfony
+
+on:
+  workflow_dispatch: # lancer le workflow manuellement
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Récupérer le code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Installer PHP + Composer
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, intl, pdo_mysql
+          tools: composer:v2
+
+      # 3. Installer les dépendances Symfony
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+
+      # 4. Lancer les tests PHPUnit (optionnel)
+      - name: Run tests
+        run: |
+          if [ -f ./vendor/bin/phpunit ]; then
+            ./vendor/bin/phpunit
+          else
+            echo "ucun test trouvé"
+          fi
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 1. Configurer SSH avec tes secrets
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEV_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.DEV_HOST }} >> ~/.ssh/known_hosts
+
+      # 2. Déployer avec rsync
+      - name: Deploy to Dev Server
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+            ./ ${{ secrets.DEV_USER }}@${{ secrets.DEV_HOST }}:/var/www/html/dev.cftravel.net
+
+          # 3. Ajuster les permissions sur le serveur
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.DEV_USER }}@${{ secrets.DEV_HOST }} \
+            "sudo chown -R www-data:www-data /var/www/html/dev.cftravel.net && sudo chmod -R 755 /var/www/html/dev.cftravel.net"
