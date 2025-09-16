@@ -54,8 +54,8 @@ jobs:
         run: |
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
-            ./ ${{ secrets.DEV_USER }}@${{ secrets.DEV_HOST }}:/var/www/html/dev.cftravel.net
+            ./ ${{ secrets.DEV_USER }}@${{ secrets.DEV_HOST }}:/var/www/html/symfony-demo
 
           # 3. Ajuster les permissions sur le serveur
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.DEV_USER }}@${{ secrets.DEV_HOST }} \
-            "sudo chown -R www-data:www-data /var/www/html/dev.cftravel.net && sudo chmod -R 755 /var/www/html/dev.cftravel.net"
+            "sudo chown -R www-data:www-data /var/www/html/symfony-demo && sudo chmod -R 755 /var/www/html/symfony-demo"
